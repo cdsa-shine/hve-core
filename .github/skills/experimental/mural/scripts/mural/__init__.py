@@ -136,16 +136,6 @@ from ._exceptions import (  # noqa: E402,F401
 _ROTATION_ENABLED = os.environ.get("MURAL_SPATIAL_ROTATION_ENABLED", "0") == "1"
 _PARENTID_FILTER_ENABLED = os.environ.get("MURAL_SPATIAL_PARENTID_FILTER", "0") == "1"
 
-# Cross-platform file-lock primitives. Exactly one is non-None at runtime.
-try:  # pragma: no cover - platform-specific
-    import fcntl as _fcntl
-except ImportError:  # pragma: no cover - Windows
-    _fcntl = None  # type: ignore[assignment]
-try:  # pragma: no cover - platform-specific
-    import msvcrt as _msvcrt
-except ImportError:  # pragma: no cover - POSIX
-    _msvcrt = None  # type: ignore[assignment]
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -244,6 +234,7 @@ from ._output import (  # noqa: E402,F401
     _emit_json,
     _emit_json_error,
     _redact_payload,
+    _stderr_color_enabled,
 )
 
 # isort: split
@@ -473,8 +464,6 @@ __all__ = [
     # env-driven flags defined locally for the importlib.reload contract
     "_ROTATION_ENABLED",
     "_PARENTID_FILTER_ENABLED",
-    # process-local mutable state re-exported from ._geometry
-    "_GEOS_PROBE_DONE",
     # re-exported from ._validation
     "_ALLOWED_HYPERLINK_SCHEMES",
     "_AZURE_BLOB_HOST_SUFFIX",
@@ -543,6 +532,7 @@ from ._cli_auth import (  # noqa: E402,F401 - re-export carved auth CLI surface
     _load_token_store_locked,
     _logout_remove_credentials,
     _migrate_source_is_keyring,
+    _profile_has_usable_session,
     _save_token_store_locked,
 )
 
@@ -900,7 +890,6 @@ from ._area_helpers import (  # noqa: E402,F401
     _log_area_fallback_once_impl,
 )
 from ._geometry import (  # noqa: E402,F401
-    _GEOS_PROBE_DONE,
     Rect,
     _area_probe_verdict,
     _ensure_geos_ready,
@@ -946,29 +935,7 @@ from ._layout import (  # noqa: E402,F401
 )
 from ._signals import _install_signal_handlers  # noqa: E402,F401
 
-# --- Phase 4 composites: confirmation gate, find, sweep, summary, DT ------
-
-
-_UX_BOARD_AREAS: list[dict[str, Any]] = [
-    {"label": "JTBD", "x": 0, "y": 0, "width": 4000, "height": 3000},
-    {"label": "Journey Stages", "x": 4500, "y": 0, "width": 4000, "height": 3000},
-    {"label": "Pain Points", "x": 9000, "y": 0, "width": 4000, "height": 3000},
-    {
-        "label": "Opportunities",
-        "x": 13500,
-        "y": 0,
-        "width": 4000,
-        "height": 3000,
-    },
-    {
-        "label": "Accessibility Requirements",
-        "x": 18000,
-        "y": 0,
-        "width": 4000,
-        "height": 3000,
-    },
-]
-
+# isort: split
 
 # --- Phase 4 CLI handlers -------------------------------------------------
 
@@ -1134,7 +1101,6 @@ from ._operations import (  # noqa: E402,F401 - re-export carved CLI operations 
     _op_area_get,
     _op_area_list,
     _op_area_probe,
-    _op_auth_status,
     _op_bootstrap_dt_board,
     _op_bootstrap_ux_board,
     _op_clone_with_tags,
@@ -1233,10 +1199,15 @@ def main(argv: list[str] | None = None) -> int:
         level=getattr(logging, args.log_level, logging.WARNING),
         format="%(levelname)s %(name)s: %(message)s",
     )
-    _state._CLI_QUIET = bool(getattr(args, "quiet", False))
-    _state._CLI_FORCE_JSON = bool(getattr(args, "json_output", False))
-    _state._CLI_COLOR = _color_mode(getattr(args, "color", "auto"))
-    _state._CLI_PROFILE = getattr(args, "profile", None) or None
+    force_json = bool(getattr(args, "json_output", False))
+    _state.set_cli_flags(
+        quiet=bool(getattr(args, "quiet", False)),
+        force_json=force_json,
+        color=_stderr_color_enabled(
+            getattr(args, "color", "auto"), force_json=force_json
+        ),
+        profile=getattr(args, "profile", None) or None,
+    )
     profile_name = (
         getattr(args, "profile", None)
         or os.environ.get(ENV_PROFILE)
@@ -1255,7 +1226,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         required_scopes = required_scopes_for_args(args)
         if required_scopes:
-            _require_scope(required_scopes, profile_name=profile_name)
+            _require_scope(required_scopes, cli_profile=getattr(args, "profile", None))
         return func(args)
     except SystemExit:
         raise

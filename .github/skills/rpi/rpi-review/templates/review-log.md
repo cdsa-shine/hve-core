@@ -69,6 +69,18 @@ Append events in order. Never rewrite or delete an earlier row. The latest event
 * Remaining active work: {{none_or_remaining_Pxx_or_Pxx_Txx_with_reason_and_next_action}}
 * Residual work: {{none_or_distinct_follow_up_item_with_scope_reason_and_owner}}
 
+## Stakeholder Note Draft
+
+<!-- Optional. Omit this section unless the user accepted a drafting action for an alignment finding; references/business-alignment.md defines the note. Plain text for the user to copy and send; no checkbox or posting step. -->
+
+### {{RV_xxx}}: Note to {{owner_or_role}}
+
+* Source document and identifiers: {{workspace_relative_path_document_id_and_cited_requirement_ids}}
+
+```text
+{{copy_ready_note_text}}
+```
+
 ## Review Record
 
 ### Scope and Evidence
@@ -78,11 +90,11 @@ Append events in order. Never rewrite or delete an earlier row. The latest event
 * Review scope: {{full_task_or_bounded_pxx_or_pxx_txx_scope}}
 * Assessed boundary: {{requirements_scope_architecture_acceptance_dependencies_and_evidence_boundary_summary}}
 * Review depth and provenance: {{standard_or_deep}}; {{default_or_explicit_user_request}}
-* Candidate identity: {{task_id_scope_and_artifact_revision_or_hash}}
+* Candidate identity: {{task_id_scope_and_artifact_revision}}
 * Review execution: {{started_Complete_Partial_or_Blocked}}
-* Helper use: {{none_or_helper_use_with_what_was_verified_at_the_cited_evidence}}
+* Helper use: {{none_or_each_helper_lane_with_its_question_reasoning_effort_and_effort_source_and_what_was_verified_at_the_cited_evidence}}
 * Plan: .copilot-tracking/plans/{{YYYY-MM-DD}}/{{task_slug}}-plan.md
-* Plan critique: .copilot-tracking/reviews/plans/{{YYYY-MM-DD}}/{{task_slug}}-plan-critique.md
+* Plan critique: {{latest_plan_critique_path_or_skipped}}
 * Changes: .copilot-tracking/changes/{{YYYY-MM-DD}}/{{task_slug}}-changes.md
 * Other evidence considered: {{research_or_validation_evidence}}
 
@@ -107,8 +119,8 @@ Cover every material requirement and in-scope completion claim, grouping rows on
 
 ### Critique and Follow-Up Assessment
 
-* Latest critique dispositions: {{coverage_summary}}
-* Material revisions: {{discovery_plan_detail_reconciliation_and_fresh_planning_and_critique_coverage}}
+* Latest critique dispositions: {{coverage_summary_or_critique_skipped}}
+* Material revisions: {{discovery_plan_detail_reconciliation_and_any_follow_up_critique}}
 * Dependent-work pause assessment: {{no_early_resumption_or_gap}}
 * Justification assessment: {{supported_or_unresolved_rationale}}
 
@@ -125,6 +137,6 @@ Unresolved plan follow-up items remain distinct follow-up work. Do not treat the
 * [ ] Execution status, assessed outcome, validation coverage, limitations, and proposed routes are complete and internally consistent.
 * [ ] The summary is scoped and advisory, findings keep their supporting context together, and acceptance coverage distinguishes demonstrated gaps from unassessed behavior.
 * [ ] Standard review completely assessed the material boundary while omitting restatement, cosmetic feedback, exhaustive strengths, low-impact suggestions, and continual narration; deep review remained inside the supplied boundary.
-* [ ] The review did not mutate source, the plan, critique, research, or changes record, did not execute validation, and verified any helper candidate at its cited evidence before recording it as a finding.
+* [ ] The review did not mutate source, the plan, critique, research, or changes record, wrote only this record (including a Stakeholder Note Draft only for an accepted drafting action), did not execute validation, verified any helper candidate at its cited evidence before recording it as a finding, and counted a requirement consistent only from a cited location.
 * Checked boundary: {{requirements_markers_updates_validation_follow_ups_and_gaps}}
 * Missing or limited evidence: {{none_or_exact_unassessed_boundary}}
