@@ -18,6 +18,7 @@ on:
     issues: read
   steps:
     - id: vex_gate
+      continue-on-error: true
       name: Gate B - skip when all findings already have terminal VEX statuses
       env:
         GH_TOKEN: ${{ github.token }}

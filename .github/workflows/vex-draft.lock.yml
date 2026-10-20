@@ -1645,6 +1645,7 @@ jobs:
             await main();
       - name: "Gate B - skip when all findings already have terminal VEX statuses"
         id: vex_gate
+        continue-on-error: true
         run: |
           set -euo pipefail
 
