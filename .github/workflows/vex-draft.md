@@ -26,6 +26,13 @@ on:
       run: |
         set -euo pipefail
 
+        issues_enabled="$(gh api "repos/${REPO_SLUG}" --jq '.has_issues')"
+        if [ "$issues_enabled" != "true" ]; then
+          echo "GitHub Issues are disabled; skipping VEX drafting."
+          echo "vex_gate_result=skipped" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
         issue_number="$(gh issue list --repo "$REPO_SLUG" --state open --label automated --limit 100 --json number,title --jq ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -n 1)"
         if [ -z "$issue_number" ]; then
           echo "No open automated VEX detection issue found; skipping."

@@ -71,7 +71,7 @@ on:
   # REPO_SLUG: ${{ github.repository }}
   # id: vex_gate
   # name: "Gate B - skip when all findings already have terminal VEX statuses"
-  # run: "set -euo pipefail\n\nissue_number=\"$(gh issue list --repo \"$REPO_SLUG\" --state open --label automated --limit 100 --json number,title --jq \".[] | select(.title == \\\"$ISSUE_TITLE\\\") | .number\" | head -n 1)\"\nif [ -z \"$issue_number\" ]; then\n  echo \"No open automated VEX detection issue found; skipping.\"\n  exit 1\nfi\n\nissue_body=\"$(gh issue view --repo \"$REPO_SLUG\" \"$issue_number\" --json body --jq '.body')\"\n\n# The pre-activation job runs without a repository checkout, so fetch both\n# the OpenVEX document and the unit-tested gate module from the default branch\n# through the contents API (the job carries contents: read). Running the tested\n# module — rather than reimplementing its parse/terminal logic inline — keeps the\n# deployed gate and its test suite in lockstep. A missing OpenVEX document is\n# treated as \"everything untriaged\" (proceed); a missing gate module fails safe\n# toward drafting.\nvex_doc=\"$(mktemp)\"\nif ! gh api -H \"Accept: application/vnd.github.raw\" \\\n     \"repos/${REPO_SLUG}/contents/security/vex/hve-core.openvex.json\" \\\n     > \"$vex_doc\" 2>/dev/null || [ ! -s \"$vex_doc\" ]; then\n  rm -f \"$vex_doc\"\nfi\n\ngate_script=\"$(mktemp)\"\nif ! gh api -H \"Accept: application/vnd.github.raw\" \\\n     \"repos/${REPO_SLUG}/contents/.github/skills/security/vex/scripts/vex_gate.py\" \\\n     > \"$gate_script\" 2>/dev/null || [ ! -s \"$gate_script\" ]; then\n  echo \"VEX gate module unavailable; proceeding.\"\n  exit 0\nfi\n\n# vex_gate.py reads the detection-issue body on stdin and the OpenVEX path as\n# its first argument. Exit 0 = proceed (untriaged or non-terminal findings),\n# 1 = skip (no findings, or every finding already has a terminal VEX status).\nprintf '%s' \"$issue_body\" | python3 \"$gate_script\" \"$vex_doc\"\n"
+  # run: "set -euo pipefail\n\nissues_enabled=\"$(gh api \"repos/${REPO_SLUG}\" --jq '.has_issues')\"\nif [ \"$issues_enabled\" != \"true\" ]; then\n  echo \"GitHub Issues are disabled; skipping VEX drafting.\"\n  echo \"vex_gate_result=skipped\" >> \"$GITHUB_OUTPUT\"\n  exit 0\nfi\n\nissue_number=\"$(gh issue list --repo \"$REPO_SLUG\" --state open --label automated --limit 100 --json number,title --jq \".[] | select(.title == \\\"$ISSUE_TITLE\\\") | .number\" | head -n 1)\"\nif [ -z \"$issue_number\" ]; then\n  echo \"No open automated VEX detection issue found; skipping.\"\n  exit 1\nfi\n\nissue_body=\"$(gh issue view --repo \"$REPO_SLUG\" \"$issue_number\" --json body --jq '.body')\"\n\n# The pre-activation job runs without a repository checkout, so fetch both\n# the OpenVEX document and the unit-tested gate module from the default branch\n# through the contents API (the job carries contents: read). Running the tested\n# module — rather than reimplementing its parse/terminal logic inline — keeps the\n# deployed gate and its test suite in lockstep. A missing OpenVEX document is\n# treated as \"everything untriaged\" (proceed); a missing gate module fails safe\n# toward drafting.\nvex_doc=\"$(mktemp)\"\nif ! gh api -H \"Accept: application/vnd.github.raw\" \\\n     \"repos/${REPO_SLUG}/contents/security/vex/hve-core.openvex.json\" \\\n     > \"$vex_doc\" 2>/dev/null || [ ! -s \"$vex_doc\" ]; then\n  rm -f \"$vex_doc\"\nfi\n\ngate_script=\"$(mktemp)\"\nif ! gh api -H \"Accept: application/vnd.github.raw\" \\\n     \"repos/${REPO_SLUG}/contents/.github/skills/security/vex/scripts/vex_gate.py\" \\\n     > \"$gate_script\" 2>/dev/null || [ ! -s \"$gate_script\" ]; then\n  echo \"VEX gate module unavailable; proceeding.\"\n  exit 0\nfi\n\n# vex_gate.py reads the detection-issue body on stdin and the OpenVEX path as\n# its first argument. Exit 0 = proceed (untriaged or non-terminal findings),\n# 1 = skip (no findings, or every finding already has a terminal VEX status).\nprintf '%s' \"$issue_body\" | python3 \"$gate_script\" \"$vex_doc\"\n"
   workflow_dispatch:
     inputs:
       aw_context:
@@ -1592,7 +1592,7 @@ jobs:
       setup-parent-span-id: ${{ steps.setup.outputs.parent-span-id || steps.setup.outputs.span-id }}
       setup-span-id: ${{ steps.setup.outputs.span-id }}
       setup-trace-id: ${{ steps.setup.outputs.trace-id }}
-      vex_gate_result: ${{ steps.vex_gate.outcome }}
+      vex_gate_result: ${{ steps.vex_gate.outputs.vex_gate_result || steps.vex_gate.outcome }}
     steps:
       - name: Setup Scripts
         id: setup
@@ -1647,6 +1647,13 @@ jobs:
         id: vex_gate
         run: |
           set -euo pipefail
+
+          issues_enabled="$(gh api "repos/${REPO_SLUG}" --jq '.has_issues')"
+          if [ "$issues_enabled" != "true" ]; then
+            echo "GitHub Issues are disabled; skipping VEX drafting."
+            echo "vex_gate_result=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           issue_number="$(gh issue list --repo "$REPO_SLUG" --state open --label automated --limit 100 --json number,title --jq ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -n 1)"
           if [ -z "$issue_number" ]; then
