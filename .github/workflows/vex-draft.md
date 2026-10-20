@@ -18,7 +18,6 @@ on:
     issues: read
   steps:
     - id: vex_gate
-      continue-on-error: true
       name: Gate B - skip when all findings already have terminal VEX statuses
       env:
         GH_TOKEN: ${{ github.token }}
@@ -26,6 +25,13 @@ on:
         ISSUE_TITLE: 'VEX detection: untriaged vulnerabilities found'
       run: |
         set -euo pipefail
+
+        issues_enabled="$(gh api "repos/${REPO_SLUG}" --jq '.has_issues')"
+        if [ "$issues_enabled" != "true" ]; then
+          echo "GitHub Issues are disabled; skipping VEX drafting."
+          echo "vex_gate_result=skipped" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
 
         issue_number="$(gh issue list --repo "$REPO_SLUG" --state open --label automated --limit 100 --json number,title --jq ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -n 1)"
         if [ -z "$issue_number" ]; then
