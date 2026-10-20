@@ -214,3 +214,4 @@ jobs:
           path: docs/docusaurus/test-results/
           retention-days: 30
           if-no-files-found: ignore
+        continue-on-error: true
